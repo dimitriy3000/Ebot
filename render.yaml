@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: echerha-bot
+    env: docker
+    plan: free
+    buildCommand: "./start.sh"
+    startCommand: "python bot.py"
+    envVars:
+      - key: TELEGRAM_TOKEN
+        value: "7807737900:AAHVYP7MCX1WKVFZBRa7iiSJpGnoi2kPX9Q"
+      - key: CHAT_ID
+        value: "6534462421"
+      - key: PLATE
+        value: "BC8774PK"
