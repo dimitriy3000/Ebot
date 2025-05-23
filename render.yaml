@@ -3,7 +3,6 @@ services:
     name: echerha-bot
     env: docker
     plan: free
-    buildCommand: "./start.sh"
     startCommand: "python bot.py"
     envVars:
       - key: TELEGRAM_TOKEN
