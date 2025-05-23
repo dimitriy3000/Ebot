@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -o errexit
 
-echo "Завантаження та встановлення Google Chrome..."
-mkdir -p /opt/chrome
-wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-dpkg -x /tmp/google-chrome.deb /opt/chrome
-ln -s /opt/chrome/opt/google/chrome/google-chrome /usr/local/bin/google-chrome
+echo "Завантаження та встановлення Google Chrome (в локальну папку)..."
+mkdir -p chrome
+wget -q -O chrome/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+dpkg -x chrome/google-chrome.deb chrome/
+ln -s $(pwd)/chrome/opt/google/chrome/google-chrome /usr/local/bin/google-chrome
 
 echo "Завантаження та встановлення ChromeDriver..."
 CHROME_VERSION=$(google-chrome --version | grep -oP '\\d+\\.\\d+\\.\\d+')
