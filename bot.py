@@ -13,11 +13,10 @@ bot = telebot.TeleBot(TOKEN)
 # Статуси з сайту
 STATUS_WAIT = "в очікуванні"
 STATUS_ENTER = "на заїзд"
-
 def check_status():
     try:
         url = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/30?plate_number={PLATE}"
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=20)
         soup = BeautifulSoup(response.text, "html.parser")
         body_text = soup.get_text().lower()
 
@@ -28,7 +27,19 @@ def check_status():
         else:
             return "невідомо"
     except Exception as e:
-        return f"помилка: {e}"
+        time.sleep(5)  # зачекати і повторити
+        try:
+            response = requests.get(url, timeout=20)
+            soup = BeautifulSoup(response.text, "html.parser")
+            body_text = soup.get_text().lower()
+            if "очікування" in body_text:
+                return STATUS_WAIT
+            elif "приготуйтесь" in body_text:
+                return STATUS_ENTER
+            else:
+                return "невідомо"
+        except Exception as e2:
+            return f"помилка: {e2}"
 
 last_status = ""
 
