@@ -10,24 +10,28 @@ PLATE = os.getenv("PLATE")
 
 bot = telebot.TeleBot(TOKEN)
 
-# Статуси з сайту
 STATUS_WAIT = "в очікуванні"
 STATUS_ENTER = "на заїзд"
+
 def check_status():
     try:
         url_wait = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/30?plate_number={PLATE}"
         url_enter = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/40?plate_number={PLATE}"
 
+        # Перевірка черги очікування
         resp_wait = requests.get(url_wait, timeout=20)
         text_wait = BeautifulSoup(resp_wait.text, "html.parser").get_text().lower()
+        bot.send_message(CHAT_ID, f"[DEBUG wait]\n{text_wait[:1000]}")
 
-        if PLATE.lower().replace(" ", "") in text_wait.replace(" ", ""):
+        if "додано до черги" in text_wait or "очікування" in text_wait:
             return STATUS_WAIT
 
+        # Перевірка черги на в'їзд
         resp_enter = requests.get(url_enter, timeout=20)
         text_enter = BeautifulSoup(resp_enter.text, "html.parser").get_text().lower()
+        bot.send_message(CHAT_ID, f"[DEBUG enter]\n{text_enter[:1000]}")
 
-        if PLATE.lower().replace(" ", "") in text_enter.replace(" ", ""):
+        if "приготуйтесь" in text_enter or "на заїзд" in text_enter:
             return STATUS_ENTER
 
         return "невідомо"
@@ -49,7 +53,4 @@ while True:
         elif current_status == STATUS_ENTER:
             bot.send_message(CHAT_ID, f"Авто {PLATE} готуйтесь на заїзд!")
 
-    if current_status == STATUS_ENTER:
-        time.sleep(10)
-    else:
-        time.sleep(120)
+    time.sleep(10 if current_status == STATUS_ENTER else 120)
