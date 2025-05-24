@@ -28,12 +28,18 @@ def check_status_and_time():
 
             # Таблиця міститься у <tbody>, рядки — <tr>
             for row in soup.select("tbody tr"):
-                cells = row.find_all("td")
-                if len(cells) >= 3:
-                    row_text = cells[0].get_text(strip=True).lower().replace(" ", "")
-                    if PLATE.lower().replace(" ", "") in row_text:
-                        approx_time = cells[1].get_text(strip=True)
-                        break
+    cells = row.find_all("td")
+    
+    # Надсилаємо в Telegram вміст рядка таблиці
+    if cells:
+        row_preview = " | ".join(cell.get_text(strip=True) for cell in cells)
+        bot.send_message(CHAT_ID, f"[DEBUG row] {row_preview}")
+
+    if len(cells) >= 3:
+        row_text = cells[0].get_text(strip=True).lower().replace(" ", "")
+        if PLATE.lower().replace(" ", "") in row_text:
+            approx_time = cells[1].get_text(strip=True)
+            break
 
             return STATUS_WAIT, approx_time
 
