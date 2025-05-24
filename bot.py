@@ -26,11 +26,14 @@ def check_status_and_time():
             soup = BeautifulSoup(resp_wait.text, "html.parser")
             approx_time = "не вказано"
 
-            # Таблиця міститься у <tbody>, рядки — <tr>
-            for row in soup.select("tbody tr"):
+            # Надсилаємо кількість знайдених рядків таблиці
+            table_rows = soup.select("tbody tr")
+            bot.send_message(CHAT_ID, f"[DEBUG] знайдено рядків у таблиці: {len(table_rows)}")
+
+            for row in table_rows:
                 cells = row.find_all("td")
 
-                # Надсилаємо в Telegram вміст рядка таблиці
+                # Надсилаємо в Telegram вміст кожного рядка
                 if cells:
                     row_preview = " | ".join(cell.get_text(strip=True) for cell in cells)
                     bot.send_message(CHAT_ID, f"[DEBUG row] {row_preview}")
@@ -52,6 +55,7 @@ def check_status_and_time():
 
     except Exception as e:
         return f"помилка: {e}", None
+
 # Перевірка в циклі
 def monitor_loop():
     global last_status, notifications_enabled
@@ -70,6 +74,7 @@ def monitor_loop():
                     bot.send_message(CHAT_ID, f"Авто {PLATE} в очікуванні.\nЧас заїзду: {approx or 'невідомо'}")
                 elif status == STATUS_ENTER:
                     bot.send_message(CHAT_ID, f"Авто {PLATE} готуйтесь на заїзд!")
+
         time.sleep(10 if last_status == STATUS_ENTER else 3600)
 
 # Telegram команди
