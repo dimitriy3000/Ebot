@@ -15,31 +15,25 @@ STATUS_WAIT = "в очікуванні"
 STATUS_ENTER = "на заїзд"
 def check_status():
     try:
-        url = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/30?plate_number={PLATE}"
-        response = requests.get(url, timeout=20)
-        soup = BeautifulSoup(response.text, "html.parser")
-        body_text = soup.get_text().lower()
+        url_wait = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/30?plate_number={PLATE}"
+        url_enter = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/40?plate_number={PLATE}"
 
-        if "очікування" in body_text:
+        resp_wait = requests.get(url_wait, timeout=20)
+        text_wait = BeautifulSoup(resp_wait.text, "html.parser").get_text().lower()
+
+        if PLATE.lower().replace(" ", "") in text_wait.replace(" ", ""):
             return STATUS_WAIT
-        elif "приготуйтесь" in body_text:
+
+        resp_enter = requests.get(url_enter, timeout=20)
+        text_enter = BeautifulSoup(resp_enter.text, "html.parser").get_text().lower()
+
+        if PLATE.lower().replace(" ", "") in text_enter.replace(" ", ""):
             return STATUS_ENTER
-        else:
-            return "невідомо"
+
+        return "невідомо"
+
     except Exception as e:
-        time.sleep(5)  # зачекати і повторити
-        try:
-            response = requests.get(url, timeout=20)
-            soup = BeautifulSoup(response.text, "html.parser")
-            body_text = soup.get_text().lower()
-            if "очікування" in body_text:
-                return STATUS_WAIT
-            elif "приготуйтесь" in body_text:
-                return STATUS_ENTER
-            else:
-                return "невідомо"
-        except Exception as e2:
-            return f"помилка: {e2}"
+        return f"помилка: {e}"
 
 last_status = ""
 
