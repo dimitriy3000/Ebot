@@ -24,6 +24,7 @@ def check_status_and_time():
         resp_wait = requests.get(url_wait, timeout=15)
         if PLATE.lower().replace(" ", "") in resp_wait.text.lower().replace(" ", ""):
             soup = BeautifulSoup(resp_wait.text, "html.parser")
+            bot.send_message(CHAT_ID, f"[DEBUG HTML wait]\n{soup.get_text()[:1000]}")
             time_tag = soup.find("span", class_="text-ellipsis")  # Може бути інший клас
             if time_tag:
                 approx_time = time_tag.text.strip()
@@ -32,11 +33,13 @@ def check_status_and_time():
 
         resp_enter = requests.get(url_enter, timeout=15)
         if PLATE.lower().replace(" ", "") in resp_enter.text.lower().replace(" ", ""):
+            soup = BeautifulSoup(resp_enter.text, "html.parser")
+            bot.send_message(CHAT_ID, f"[DEBUG HTML enter]\n{soup.get_text()[:1000]}")
             return STATUS_ENTER, None
 
         return "невідомо", None
+
     except Exception as e:
-        bot.send_message(CHAT_ID, f"[DEBUG HTML]\n{soup.get_text()[:1000]}")
         return f"помилка: {e}", None
 
 # Перевірка в циклі
