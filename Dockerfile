@@ -3,20 +3,27 @@ FROM python:3.10-slim
 WORKDIR /app
 COPY . /app
 
-# Встановлення Chrome та ChromeDriver
+# Встановлення залежностей ОС
 RUN apt-get update && apt-get install -y \
     wget \
     curl \
-    unzip \
     gnupg \
-    ca-certificates \
+    unzip \
     chromium \
-    chromium-driver && \
-    rm -rf /var/lib/apt/lists/*
+    chromium-driver \
+    fonts-liberation \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libxss1 \
+    libasound2 \
+    libxshmfence1 \
+    xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Встановлення залежностей Python
+# Встановлення Python-залежностей
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Фейковий HTTP-сервер для Render
 EXPOSE 10000
 
 CMD ["sh", "-c", "python bot.py & python -m http.server 10000"]
