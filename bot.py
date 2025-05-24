@@ -28,21 +28,22 @@ def check_status_and_time():
 
             # Таблиця міститься у <tbody>, рядки — <tr>
             for row in soup.select("tbody tr"):
-    cells = row.find_all("td")
-    
-    # Надсилаємо в Telegram вміст рядка таблиці
-    if cells:
-        row_preview = " | ".join(cell.get_text(strip=True) for cell in cells)
-        bot.send_message(CHAT_ID, f"[DEBUG row] {row_preview}")
+                cells = row.find_all("td")
 
-    if len(cells) >= 3:
-        row_text = cells[0].get_text(strip=True).lower().replace(" ", "")
-        if PLATE.lower().replace(" ", "") in row_text:
-            approx_time = cells[1].get_text(strip=True)
-            break
+                # Надсилаємо в Telegram вміст рядка таблиці
+                if cells:
+                    row_preview = " | ".join(cell.get_text(strip=True) for cell in cells)
+                    bot.send_message(CHAT_ID, f"[DEBUG row] {row_preview}")
+
+                if len(cells) >= 3:
+                    row_text = cells[0].get_text(strip=True).lower().replace(" ", "")
+                    if PLATE.lower().replace(" ", "") in row_text:
+                        approx_time = cells[1].get_text(strip=True)
+                        break
 
             return STATUS_WAIT, approx_time
 
+        # Якщо авто не в очікуванні — перевіряємо на заїзд
         resp_enter = requests.get(url_enter, timeout=15)
         if PLATE.lower().replace(" ", "") in resp_enter.text.lower().replace(" ", ""):
             return STATUS_ENTER, None
@@ -51,7 +52,6 @@ def check_status_and_time():
 
     except Exception as e:
         return f"помилка: {e}", None
-
 # Перевірка в циклі
 def monitor_loop():
     global last_status, notifications_enabled
