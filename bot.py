@@ -1,73 +1,50 @@
 import os
 import time
 import requests
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from telegram import Bot
+import telebot
+from bs4 import BeautifulSoup
 
-# Дані напряму
-TELEGRAM_TOKEN = "7807737900:AAHVYP7MCX1WKVFZBRa7iiSJpGnoi2kPX9Q"
-CHAT_ID = "6534462421"
-PLATE = "BC8774PK"
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+PLATE = os.getenv("PLATE")
 
-bot = Bot(token=TELEGRAM_TOKEN)
+bot = telebot.TeleBot(TOKEN)
+
+# Статуси з сайту
+STATUS_WAIT = "в очікуванні"
+STATUS_ENTER = "на заїзд"
 
 def check_status():
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    driver = webdriver.Chrome(options=options)
-
     try:
-        driver.get("https://echerha.gov.ua/check")
-        time.sleep(2)
+        url = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/30?plate_number={PLATE}"
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, "html.parser")
+        body_text = soup.get_text().lower()
 
-        input_elem = driver.find_element(By.NAME, "plate")
-        input_elem.clear()
-        input_elem.send_keys(PLATE)
-        input_elem.send_keys(Keys.RETURN)
-
-        time.sleep(4)
-
-        result_elem = driver.find_element(By.CLASS_NAME, "status-message")
-        status_text = result_elem.text.strip().lower()
-
-        if "очікування" in status_text:
-            return "в очікуванні"
-        elif "приготуйтесь" in status_text:
-            return "на заїзд"
+        if "очікування" in body_text:
+            return STATUS_WAIT
+        elif "приготуйтесь" in body_text:
+            return STATUS_ENTER
         else:
             return "невідомо"
     except Exception as e:
-        print(f"[check_status error] {e}")
-        return "невідомо"
-    finally:
-        driver.quit()
+        return f"помилка: {e}"
 
-last_status = None
+last_status = ""
 
 while True:
-    try:
-        current_status = check_status()
-        if current_status != last_status:
-            bot.send_message(chat_id=CHAT_ID, text=f"Статус авто {PLATE} змінився!\nНовий статус: {current_status}")
-            last_status = current_status
-        else:
-            if current_status == "в очікуванні":
-                bot.send_message(chat_id=CHAT_ID, text=f"Авто {PLATE} все ще в черзі очікування.")
-            elif current_status == "на заїзд":
-                bot.send_message(chat_id=CHAT_ID, text=f"Авто {PLATE} готуйтесь на заїзд!")
+    current_status = check_status()
 
-        if current_status == "в очікуванні":
-            time.sleep(120)
-        elif current_status == "на заїзд":
-            time.sleep(10)
-        else:
-            time.sleep(300)
+    if current_status != last_status:
+        bot.send_message(CHAT_ID, f"Статус авто {PLATE} змінився!\nНовий статус: {current_status}")
+        last_status = current_status
+    else:
+        if current_status == STATUS_WAIT:
+            bot.send_message(CHAT_ID, f"Авто {PLATE} все ще в очікуванні.")
+        elif current_status == STATUS_ENTER:
+            bot.send_message(CHAT_ID, f"Авто {PLATE} готуйтесь на заїзд!")
 
-    except Exception as e:
-        bot.send_message(chat_id=CHAT_ID, text=f"Помилка в коді: {e}")
-        time.sleep(300)
+    if current_status == STATUS_ENTER:
+        time.sleep(10)
+    else:
+        time.sleep(120)
