@@ -26,12 +26,12 @@ def check_status_and_time():
             soup = BeautifulSoup(resp_wait.text, "html.parser")
             approx_time = "не вказано"
 
-            # Знайти всі рядки таблиці
-            for row in soup.find_all("tr"):
-                row_text = row.get_text(separator=" ").lower().replace(" ", "")
-                if PLATE.lower().replace(" ", "") in row_text:
-                    cells = row.find_all("td")
-                    if len(cells) >= 2:
+            # Таблиця міститься у <tbody>, рядки — <tr>
+            for row in soup.select("tbody tr"):
+                cells = row.find_all("td")
+                if len(cells) >= 3:
+                    row_text = cells[0].get_text(strip=True).lower().replace(" ", "")
+                    if PLATE.lower().replace(" ", "") in row_text:
                         approx_time = cells[1].get_text(strip=True)
                         break
 
