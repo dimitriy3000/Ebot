@@ -24,22 +24,21 @@ def check_status_and_time():
         resp_wait = requests.get(url_wait, timeout=15)
         if PLATE.lower().replace(" ", "") in resp_wait.text.lower().replace(" ", ""):
             soup = BeautifulSoup(resp_wait.text, "html.parser")
-            full_text = soup.get_text(separator=" ").strip()
-            bot.send_message(CHAT_ID, f"[DEBUG wait HTML]\n{full_text[:1000]}")
-
             approx_time = "не вказано"
-            for line in full_text.splitlines():
-                if "орієнтовний час на заїзд" in line.lower():
-                    approx_time = line.strip().split(":")[-1].strip()
-                    break
+
+            # Знайти всі рядки таблиці
+            for row in soup.find_all("tr"):
+                row_text = row.get_text(separator=" ").lower().replace(" ", "")
+                if PLATE.lower().replace(" ", "") in row_text:
+                    cells = row.find_all("td")
+                    if len(cells) >= 2:
+                        approx_time = cells[1].get_text(strip=True)
+                        break
 
             return STATUS_WAIT, approx_time
 
         resp_enter = requests.get(url_enter, timeout=15)
         if PLATE.lower().replace(" ", "") in resp_enter.text.lower().replace(" ", ""):
-            soup = BeautifulSoup(resp_enter.text, "html.parser")
-            full_text = soup.get_text(separator=" ").strip()
-            bot.send_message(CHAT_ID, f"[DEBUG enter HTML]\n{full_text[:1000]}")
             return STATUS_ENTER, None
 
         return "невідомо", None
