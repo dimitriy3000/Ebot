@@ -54,7 +54,6 @@ while True:
         current_status = check_status()
         if current_status != last_status:
             bot.send_message(chat_id=CHAT_ID, text=f"Статус авто {PLATE} змінився!\nНовий статус: {current_status}")
-Новий статус: {current_status}")
             last_status = current_status
         else:
             if current_status == "в очікуванні":
