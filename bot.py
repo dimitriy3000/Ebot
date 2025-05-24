@@ -36,6 +36,7 @@ def check_status_and_time():
 
         return "невідомо", None
     except Exception as e:
+        bot.send_message(CHAT_ID, f"[DEBUG HTML]\n{soup.get_text()[:1000]}")
         return f"помилка: {e}", None
 
 # Перевірка в циклі
