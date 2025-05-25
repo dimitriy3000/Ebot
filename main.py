@@ -1,23 +1,21 @@
 import os
-import time
-import threading
 import requests
 import telebot
-from flask import Flask
+import threading
+from flask import Flask, request
 
-# --- Telegram токен ---
+# === Конфігурація ===
 TOKEN = os.getenv("TELEGRAM_TOKEN") or "ВСТАВ_СВІЙ_ТОКЕН"
-bot = telebot.TeleBot(TOKEN)
+WEBHOOK_URL = os.getenv("WEBHOOK_URL") or "https://твій-домен.onrender.com"  # Замінити на свій
 
-# --- Статуси ---
+bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
+
 STATUS_WAIT = "в очікуванні"
 STATUS_ENTER = "на заїзд"
 users = {}
 
-# --- Flask для Render ---
-app = Flask(__name__)
-
-# --- Перевірка статусу авто ---
+# === Перевірка статусу авто ===
 def check_status(plate):
     try:
         normalized = plate.lower().replace(" ", "")
@@ -25,8 +23,7 @@ def check_status(plate):
         url_enter = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/40?plate_number={plate}"
 
         session = requests.Session()
-        adapter = requests.adapters.HTTPAdapter(max_retries=3)
-        session.mount("https://", adapter)
+        session.mount("https://", requests.adapters.HTTPAdapter(max_retries=3))
 
         resp_wait = session.get(url_wait, timeout=10)
         if normalized in resp_wait.text.lower().replace(" ", ""):
@@ -41,7 +38,7 @@ def check_status(plate):
     except Exception as e:
         return f"помилка: {e}"
 
-# --- Головний цикл перевірки ---
+# === Моніторинг черги ===
 def monitor_loop():
     while True:
         for chat_id, info in users.items():
@@ -61,9 +58,9 @@ def monitor_loop():
                 elif status == STATUS_ENTER:
                     bot.send_message(chat_id, f"Авто {plate} готуйтесь на заїзд!")
 
-        time.sleep(60 if any(u.get("last_status") == STATUS_ENTER for u in users.values()) else 3600)
+        threading.Event().wait(60 if any(u.get("last_status") == STATUS_ENTER for u in users.values()) else 3600)
 
-# --- Telegram команди ---
+# === Обробка Telegram команд ===
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
     users[message.chat.id] = {"plate": "", "last_status": "", "enabled": True}
@@ -98,21 +95,21 @@ def status_cmd(message):
     status = check_status(plate)
     bot.send_message(message.chat.id, f"Статус авто {plate}: {status}")
 
-# --- Запуск бота ---
-def run_bot():
-    while True:
-        try:
-            threading.Thread(target=monitor_loop, daemon=True).start()
-            bot.polling()
-        except Exception as e:
-            print("BOT ERROR:", e)
-            time.sleep(30)
+# === Webhook Flask маршрут ===
+@app.route(f"/{TOKEN}", methods=["POST"])
+def receive_update():
+    json_str = request.get_data().decode("UTF-8")
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return "!", 200
 
-@app.route('/')
+@app.route("/")
 def index():
-    return "Бот запущено та працює!"
+    return "Бот запущено через Webhook!"
 
-# --- Запуск на Render ---
+# === Запуск Webhook та моніторингу ===
 if __name__ == "__main__":
-    threading.Thread(target=run_bot, daemon=True).start()
+    bot.remove_webhook()
+    bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
+    threading.Thread(target=monitor_loop, daemon=True).start()
     app.run(host="0.0.0.0", port=10000)
