@@ -5,26 +5,34 @@ import requests
 import telebot
 from flask import Flask
 
-TOKEN = os.getenv("TELEGRAM_TOKEN")
+# --- Telegram токен ---
+TOKEN = os.getenv("TELEGRAM_TOKEN") or "ВСТАВ_СВІЙ_ТОКЕН"
 bot = telebot.TeleBot(TOKEN)
 
+# --- Статуси ---
 STATUS_WAIT = "в очікуванні"
 STATUS_ENTER = "на заїзд"
 users = {}
 
+# --- Flask для Render ---
 app = Flask(__name__)
 
+# --- Перевірка статусу авто ---
 def check_status(plate):
     try:
         normalized = plate.lower().replace(" ", "")
         url_wait = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/30?plate_number={plate}"
         url_enter = f"https://echerha.gov.ua/workload/1/checkpoints/17/1/40?plate_number={plate}"
 
-        resp_wait = requests.get(url_wait, timeout=15)
+        session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(max_retries=3)
+        session.mount("https://", adapter)
+
+        resp_wait = session.get(url_wait, timeout=10)
         if normalized in resp_wait.text.lower().replace(" ", ""):
             return STATUS_WAIT
 
-        resp_enter = requests.get(url_enter, timeout=15)
+        resp_enter = session.get(url_enter, timeout=10)
         if normalized in resp_enter.text.lower().replace(" ", ""):
             return STATUS_ENTER
 
@@ -33,6 +41,7 @@ def check_status(plate):
     except Exception as e:
         return f"помилка: {e}"
 
+# --- Головний цикл перевірки ---
 def monitor_loop():
     while True:
         for chat_id, info in users.items():
@@ -52,8 +61,9 @@ def monitor_loop():
                 elif status == STATUS_ENTER:
                     bot.send_message(chat_id, f"Авто {plate} готуйтесь на заїзд!")
 
-        time.sleep(10 if any(u.get("last_status") == STATUS_ENTER for u in users.values()) else 3600)
+        time.sleep(60 if any(u.get("last_status") == STATUS_ENTER for u in users.values()) else 3600)
 
+# --- Telegram команди ---
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
     users[message.chat.id] = {"plate": "", "last_status": "", "enabled": True}
@@ -88,14 +98,21 @@ def status_cmd(message):
     status = check_status(plate)
     bot.send_message(message.chat.id, f"Статус авто {plate}: {status}")
 
+# --- Запуск бота ---
 def run_bot():
-    threading.Thread(target=monitor_loop, daemon=True).start()
-    bot.polling()
+    while True:
+        try:
+            threading.Thread(target=monitor_loop, daemon=True).start()
+            bot.polling()
+        except Exception as e:
+            print("BOT ERROR:", e)
+            time.sleep(30)
 
 @app.route('/')
 def index():
-    return "Бот працює на Render Web Service!"
+    return "Бот запущено та працює!"
 
+# --- Запуск на Render ---
 if __name__ == "__main__":
-    run_bot()
+    threading.Thread(target=run_bot, daemon=True).start()
     app.run(host="0.0.0.0", port=10000)
